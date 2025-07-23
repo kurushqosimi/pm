@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  ssh:
+    image: linuxserver/openssh-server
+    container_name: test-ssh
+    environment:
+      - USER_NAME=testuser
+      - PASSWORD_ACCESS=false
+      - PUBLIC_KEY_DIR=/keys
+      - SUDO_ACCESS=false
+      - LOG_STDOUT=true
+    volumes:
+      - ./keys:/keys:ro
+      - ./repo:/repo
+    ports:
+      - "2222:2222"
+    restart: unless-stopped
