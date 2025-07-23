@@ -9,7 +9,7 @@ import (
 )
 
 func Create(manifestPath, repoRoot string, ssh sshclient.Storage) (remotePath string, _ error) {
-	m, err := manifest.Read(manifestPath)
+	m, err := manifest.ReadManifest(manifestPath)
 	if err != nil {
 		return "", err
 	}

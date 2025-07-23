@@ -27,7 +27,7 @@ type Manifest struct {
 	Packets []Dep `json:"packets,omitempty" yaml:"packets,omitempty"`
 }
 
-func Read(path string) (*Manifest, error) {
+func ReadManifest(path string) (*Manifest, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

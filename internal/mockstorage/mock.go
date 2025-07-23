@@ -20,5 +20,17 @@ func (f FS) Download(src string) ([]byte, error) {
 }
 
 func (f FS) List(dirPath string) ([]sshclient.DirEntry, error) {
-	return nil, nil
+	full := filepath.Join(f.Root, dirPath)
+	entries, err := os.ReadDir(full)
+	if err != nil {
+		return nil, err
+	}
+	var out []sshclient.DirEntry
+	for _, e := range entries {
+		out = append(out, sshclient.DirEntry{
+			Name:  e.Name(),
+			IsDir: e.IsDir(),
+		})
+	}
+	return out, nil
 }

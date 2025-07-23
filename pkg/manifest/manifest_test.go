@@ -6,7 +6,7 @@ import (
 )
 
 func TestReadManifest_JSON(t *testing.T) {
-	m, err := Read("testdata/packet.json")
+	m, err := ReadManifest("testdata/packet.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -16,7 +16,7 @@ func TestReadManifest_JSON(t *testing.T) {
 }
 
 func TestReadManifest_YAML(t *testing.T) {
-	m, err := Read("testdata/packet.yaml")
+	m, err := ReadManifest("testdata/packet.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func TestReadManifest_YAML(t *testing.T) {
 }
 
 func TestReadManifest_FileNotFound(t *testing.T) {
-	_, err := Read("testdata/not_exist.yaml")
+	_, err := ReadManifest("testdata/not_exist.yaml")
 	if err == nil {
 		t.Fatal("expected error for missing file, got nil")
 	}
@@ -39,7 +39,7 @@ func TestReadManifest_UnsupportedExtension(t *testing.T) {
 		_ = os.Remove(f)
 	}()
 
-	_, err := Read(f)
+	_, err := ReadManifest(f)
 	if err == nil || err.Error() != `unsupported manifest extension ".txt"` {
 		t.Fatalf("expected unsupported extension error, got: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestReadManifest_InvalidJSON(t *testing.T) {
 		_ = os.Remove(f)
 	}()
 
-	_, err := Read(f)
+	_, err := ReadManifest(f)
 	if err == nil || err.Error()[:5] != "json:" {
 		t.Fatalf("expected json error, got: %v", err)
 	}
@@ -65,14 +65,14 @@ func TestReadManifest_EmptyFile(t *testing.T) {
 		_ = os.Remove(f)
 	}()
 
-	_, err := Read(f)
+	_, err := ReadManifest(f)
 	if err == nil {
 		t.Fatal("expected error for empty file, got nil")
 	}
 }
 
 func TestReadManifest_JSON_Fields(t *testing.T) {
-	m, err := Read("testdata/packet.json")
+	m, err := ReadManifest("testdata/packet.json")
 	if err != nil {
 		t.Fatal(err)
 	}

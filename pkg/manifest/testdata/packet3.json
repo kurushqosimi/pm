@@ -1,6 +1,6 @@
 {
-  "name": "packet-1",
-  "ver": "1.10.0",
+  "name": "packet-3",
+  "ver": "1.11.0",
   "targets": [
     {
       "path": "./archive_this1/*.txt"

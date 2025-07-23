@@ -1,1 +1,243 @@
 # pm
+
+---
+
+## Инструкция по запуску `pm`
+
+### Требования:
+
+* Go 1.20+
+* Docker и Docker Compose
+* Git
+
+---
+
+## Шаги
+
+### 1. Клонировать проект
+
+```bash
+git clone https://github.com/kurushqosimi/pm
+cd pm
+```
+
+---
+
+### 2. Проверить структуру SSH-ключей
+
+В директории `./keys` должны быть следующие файлы:
+
+```bash
+keys/
+├── id_rsa_test         # приватный ключ
+├── id_rsa_test.pub     # публичный ключ
+└── authorized_keys     # содержит public key
+```
+
+Если ключи отсутствуют, сгенерируйте их:
+
+```bash
+ssh-keygen -t rsa -b 2048 -f ./keys/id_rsa_test -N ""
+cp ./keys/id_rsa_test.pub ./keys/authorized_keys
+```
+
+---
+
+### 3. Запустить контейнер с SFTP-сервером
+
+```bash
+docker-compose up -d
+```
+
+> Контейнер поднимет SSH-сервер с пользователем `testuser`, доступным по ключу.
+
+---
+
+### 4. Проверить наличие `repo/` каталога на хосте
+
+Он должен быть создан автоматически `docker-compose` и проброшен в контейнер.
+
+Если нет — создайте вручную:
+
+```bash
+mkdir -p repo
+```
+
+---
+
+### 5. Проверить SSH-подключение
+
+```bash
+ssh -i ./keys/id_rsa_test testuser@localhost -p 2222
+```
+
+При первом подключении нужно будет ввести `yes` — затем вы попадёте в shell контейнера. Можно выйти:
+
+```bash
+exit
+```
+
+---
+
+### 6. Проверить манифест
+
+В `pkg/manifest/testdata/packet.json` должен быть валидный JSON:
+
+```json
+{
+  "name": "packet-1",
+  "ver": "1.10.0",
+  "targets": [
+    { "path": "./pkg/manifest/testdata/*.json" }
+  ],
+  "packets": []
+}
+```
+
+Можно изменить пути и добавить тестовые `.txt` файлы в эту же директорию.
+
+---
+
+### 7. Выполнить команду `create`
+
+```bash
+go run ./cmd/pm/main.go create ./pkg/manifest/testdata/packet.json \
+  --host=localhost:2222 \
+  --user=testuser \
+  --key=./keys/id_rsa_test \
+  --repo=/repo
+```
+
+Ожидаемый вывод:
+
+```text
+2025/07/22 21:17:38 Uploaded to localhost:2222/repo/packet-1/1.10.tar.gz
+```
+
+И в каталоге `repo/packet-1/1.10.tar.gz` должен появиться архив.
+
+---
+
+### Готово!
+
+---
+
+## Примечание по безопасности
+
+В `docker-compose.yml` используется переменная:
+
+```yaml
+- HOST_KEY_CHECKING=false
+```
+
+Фактически, в коде Go отключена проверка хост-ключа:
+
+```go
+HostKeyCallback: ssh.InsecureIgnoreHostKey()
+```
+
+Это **нормально для тестового окружения**, но **в проде** надо использовать `known_hosts` и проверку подписи.
+
+Вот подробная **инструкция по использованию команды `update`** для твоего CLI-инструмента `pm`.
+
+---
+
+## Команда `pm update`
+
+1. Читает `packages.json`, где указаны нужные пакеты и версии.
+2. Подключается к удалённому SFTP-серверу по SSH.
+3. Для каждого пакета:
+
+    * находит подходящую версию по `semver`-условию,
+    * проверяет, установлена ли она локально,
+    * если нет — скачивает `.tar.gz`-архив и распаковывает в локальную папку.
+
+---
+
+## Подготовка
+
+### 1. Убедитесь, что у вас есть:
+
+* Запущенный SFTP-сервер, например, через `docker-compose.yml`(пример есть в корневой папке)
+
+* Папка `repo/` с нужными архивами:
+
+```bash
+repo/
+├── packet-1/
+│   └── 1.0.0.tar.gz
+├── packet-2/
+│   └── 1.11.0.tar.gz
+└── packet-3/
+    └── 1.11.0.tar.gz
+```
+
+### 2. Ключи и доступ
+
+Убедись, что:
+
+* у пользователя `testuser` есть публичный ключ (лежит в `./keys`)
+* приватный ключ `id_rsa_test` используется клиентом `pm`
+
+---
+
+## Пример файла `packages.json`
+
+```json
+{
+  "packages": [
+    { "name": "packet-1", "ver": ">=1.0.0" },
+    { "name": "packet-2" },
+    { "name": "packet-3", "ver": "<=2.0.0" }
+  ]
+}
+```
+
+---
+
+## Запуск команды `update`
+
+```bash
+go run ./cmd/pm/main.go update ./pkg/manifest/testdata/packages.json \
+  --host=localhost:2222 \
+  --user=testuser \
+  --key=./keys/id_rsa_test \
+  --repo=/repo \
+  --local=./packages
+```
+
+### Флаги:
+
+| Флаг      | Описание                                   |
+| --------- | ------------------------------------------ |
+| `--host`  | Хост и порт SSH сервера (`localhost:2222`) |
+| `--user`  | Имя пользователя на сервере (`testuser`)   |
+| `--key`   | Путь до приватного ключа (`id_rsa_test`)   |
+| `--repo`  | Корневая папка на сервере (`/repo`)        |
+| `--local` | Куда распаковывать локально (`./packages`) |
+
+---
+
+## После выполнения
+
+Если всё корректно:
+
+* архивы `*.tar.gz` скачиваются с сервера;
+* содержимое каждого архива распаковывается в:
+
+```
+./packages/packet-1/
+./packages/packet-2/
+./packages/packet-3/
+```
+
+---
+
+## Проверка
+
+```bash
+ls ./packages
+# packet-1  packet-2  packet-3
+
+cat ./packages/packet-1/somefile.txt
+```
