@@ -23,9 +23,11 @@ func Collect(baseDir string, targets []manifest.Target) ([]string, error) {
 		}
 
 		var exPatterns []string
-		for _, ex := range target.Exclude {
-			exPatterns = append(exPatterns, ex)
-		}
+		//for _, ex := range target.Exclude {
+		//	exPatterns = append(exPatterns, ex)
+		//}
+
+		exPatterns = append(exPatterns, target.Exclude...)
 
 		for _, relPath := range includes {
 			skip := false
